@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rate Contract Dashboard</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --surface-2: #f3f2ee;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11,11,11,0.10);
+  --accent: #1f3a5f;
+  --accent-ink: #ffffff;
+  --series-1: #2a78d6;
+  --series-1-soft: #cde2fb;
+  --good: #0ca30c;
+  --good-ink: #006300;
+  --warning: #fab219;
+  --serious: #ec835a;
+  --critical: #d03b3b;
+  --shadow: 0 1px 2px rgba(0,0,0,.04), 0 2px 8px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232321;
+    --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+    --accent: #2b4c78; --series-1: #3987e5; --series-1-soft: #1c3557;
+    --good-ink: #0ca30c; --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232321;
+  --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+  --accent: #2b4c78; --series-1: #3987e5; --series-1-soft: #1c3557;
+  --good-ink: #0ca30c; --shadow: none;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--page); color: var(--ink);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+header {
+  background: var(--accent); color: var(--accent-ink);
+  padding: 16px 24px; display: flex; flex-wrap: wrap; gap: 12px;
+  align-items: center; justify-content: space-between;
+}
+header h1 { margin: 0; font-size: 20px; font-weight: 650; }
+header p { margin: 2px 0 0; font-size: 12px; opacity: .8; }
+.hdr-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn {
+  font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+  cursor: pointer; white-space: nowrap;
+}
+.btn:hover { background: var(--surface-2); }
+header .btn { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.25); }
+header .btn:hover { background: rgba(255,255,255,.22); }
+header .btn.primary { background: #fff; color: #1f3a5f; font-weight: 600; }
+main { max-width: 1400px; margin: 0 auto; padding: 20px 24px 40px; }
+
+.filters {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 16px;
+}
+.filters input, .filters select, .field input, .field select, .field textarea, .card-head select {
+  font: inherit; font-size: 13px; padding: 7px 10px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+}
+.filters input[type=search] { flex: 1 1 220px; min-width: 0; }
+.filters select { flex: 0 1 170px; min-width: 0; }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.kpi {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 14px 16px; box-shadow: var(--shadow);
+}
+.kpi .lbl { font-size: 12px; color: var(--ink-2); display: flex; align-items: center; gap: 6px; }
+.kpi .val { font-size: 26px; font-weight: 650; margin-top: 4px; }
+.kpi .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+@media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px; box-shadow: var(--shadow); min-width: 0;
+}
+.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.card h2 { margin: 0; font-size: 15px; font-weight: 600; }
+.card .hint { font-size: 12px; color: var(--muted); }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { font-size: 12px; fill: var(--ink-2); font-variant-numeric: tabular-nums; }
+.chart .lbl-strong { fill: var(--ink); }
+.chart .empty { padding: 30px 0; text-align: center; color: var(--muted); }
+.hit { fill: transparent; cursor: default; }
+.bar { fill: var(--series-1); }
+.track { fill: var(--series-1-soft); }
+.row-hover .bar { opacity: 1; }
+g.hov:hover .bar { filter: brightness(1.12); }
+g.hov:hover .hit { fill: var(--surface-2); }
+
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 9px 10px; text-align: left; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th { font-size: 12px; color: var(--ink-2); font-weight: 600; cursor: pointer; user-select: none; position: sticky; top: 0; background: var(--surface); }
+th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+tbody tr:hover { background: var(--surface-2); }
+td .small { display: block; font-size: 11px; color: var(--muted); }
+.badge {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 2px 8px;
+  border-radius: 999px; border: 1px solid var(--border); color: var(--ink);
+}
+.util { display: flex; align-items: center; gap: 8px; min-width: 130px; }
+.util .trk { flex: 1; height: 6px; background: var(--series-1-soft); border-radius: 3px; overflow: hidden; }
+.util .fil { height: 100%; background: var(--series-1); border-radius: 3px; }
+.util .fil.over { background: var(--critical); }
+.icon-btn { background: none; border: none; color: var(--ink-2); cursor: pointer; font-size: 13px; padding: 2px 6px; border-radius: 6px; }
+.icon-btn:hover { background: var(--grid); color: var(--ink); }
+.tbl-foot { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; color: var(--muted); }
+
+#tip {
+  position: fixed; pointer-events: none; z-index: 50; display: none;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.15);
+  max-width: 260px;
+}
+#tip b { display: block; margin-bottom: 2px; }
+#tip .k { color: var(--ink-2); }
+
+dialog {
+  border: 1px solid var(--border); border-radius: 14px; padding: 0; width: min(720px, calc(100vw - 32px));
+  background: var(--surface); color: var(--ink);
+}
+dialog::backdrop { background: rgba(0,0,0,.4); }
+.dlg-head { padding: 16px 20px; border-bottom: 1px solid var(--grid); display: flex; justify-content: space-between; align-items: center; }
+.dlg-head h3 { margin: 0; font-size: 16px; }
+.form-grid { padding: 16px 20px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 640px) { .form-grid { grid-template-columns: minmax(0, 1fr); } }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: 12px; color: var(--ink-2); }
+.field.wide { grid-column: 1 / -1; }
+.dlg-foot { padding: 12px 20px 16px; display: flex; justify-content: flex-end; gap: 8px; }
+.btn.primary { background: var(--accent); color: #fff; border-color: transparent; }
+.btn.primary:hover { filter: brightness(1.1); background: var(--accent); }
+
+@media (max-width: 640px) {
+  header, main { padding-left: 16px; padding-right: 16px; }
+  .kpi .val { font-size: 22px; }
+}
+@media print {
+  header .hdr-actions, .filters, .icon-btn, th:last-child, td:last-child { display: none !important; }
+  body { background: #fff; }
+  .card, .kpi { box-shadow: none; break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Rate Contract Dashboard</h1>
+    <p id="asof"></p>
+  </div>
+  <div class="hdr-actions">
+    <button class="btn primary" id="btnAdd">+ Add RC</button>
+    <button class="btn" id="btnImport">Import CSV</button>
+    <button class="btn" id="btnExport">Export CSV</button>
+    <button class="btn" id="btnPrint">Print</button>
+    <button class="btn" id="btnTheme" title="Toggle light/dark">◐ Theme</button>
+    <input type="file" id="fileIn" accept=".csv,text/csv" hidden>
+  </div>
+</header>
+
+<main>
+  <div class="filters">
+    <input type="search" id="fSearch" placeholder="Search RC no, vendor, item, project…">
+    <select id="fCategory"></select>
+    <select id="fVendor"></select>
+    <select id="fProject"></select>
+    <select id="fStatus"></select>
+    <button class="btn" id="btnClear">Clear</button>
+  </div>
+
+  <section class="kpis" id="kpis"></section>
+
+  <section class="grid">
+    <div class="card">
+      <div class="card-head"><h2>Contract value by category</h2><span class="hint">₹, incl. all filtered RCs</span></div>
+      <div class="chart" id="chCategory"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Expiry outlook</h2><span class="hint">RCs ending per month</span></div>
+      <div class="chart" id="chExpiry"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Utilization by vendor</h2><span class="hint">Used vs contract value</span></div>
+      <div class="chart" id="chVendor"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Rate comparison</h2><select id="rateItem" aria-label="Item"></select></div>
+      <div class="chart" id="chRate"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Rate contracts</h2><span class="hint" id="tblCount"></span></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr id="thead"></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="tbl-foot">
+      <span>Click a column header to sort. Data is saved in this browser.</span>
+      <button class="btn" id="btnReset">Reset to sample data</button>
+    </div>
+  </section>
+</main>
+
+<div id="tip"></div>
+
+<dialog id="dlg">
+  <form method="dialog" id="frm">
+    <div class="dlg-head"><h3 id="dlgTitle">Add rate contract</h3><button class="icon-btn" value="cancel" aria-label="Close">✕</button></div>
+    <div class="form-grid">
+      <div class="field"><label>RC No *</label><input name="rcNo" required></div>
+      <div class="field"><label>Vendor *</label><input name="vendor" list="dlVendor" required></div>
+      <div class="field"><label>Project / Site</label><input name="project" list="dlProject"></div>
+      <div class="field"><label>Item / Material *</label><input name="item" list="dlItem" required></div>
+      <div class="field"><label>Category *</label><input name="category" list="dlCategory" required></div>
+      <div class="field"><label>Unit</label><input name="unit" placeholder="Bag, MT, Sqft…"></div>
+      <div class="field"><label>Rate (₹, excl. GST) *</label><input name="rate" type="number" step="0.01" min="0" required></div>
+      <div class="field"><label>GST %</label><input name="gst" type="number" step="0.01" min="0" value="18"></div>
+      <div class="field"><label>Contract value (₹)</label><input name="value" type="number" step="1" min="0"></div>
+      <div class="field"><label>Start date *</label><input name="start" type="date" required></div>
+      <div class="field"><label>End date *</label><input name="end" type="date" required></div>
+      <div class="field"><label>Utilized value (₹)</label><input name="utilized" type="number" step="1" min="0" value="0"></div>
+      <div class="field wide"><label>Remarks</label><textarea name="remarks" rows="2"></textarea></div>
+    </div>
+    <div class="dlg-foot">
+      <button class="btn" value="cancel" formnovalidate>Cancel</button>
+      <button class="btn primary" value="save" id="btnSave">Save</button>
+    </div>
+  </form>
+</dialog>
+<datalist id="dlVendor"></datalist><datalist id="dlProject"></datalist>
+<datalist id="dlItem"></datalist><datalist id="dlCategory"></datalist>
+
+<script>
+(() => {
+const STORE = 'rc-dashboard-v1';
+const DAY = 86400000;
+const today = new Date(); today.setHours(0,0,0,0);
+const iso = d => new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+const addDays = n => iso(new Date(today.getTime() + n*DAY));
+
+// ---------- sample data (dates relative to today so statuses stay meaningful) ----------
+function sample() {
+  const r = (rcNo, vendor, item, category, unit, rate, gst, s, e, project, value, utilized, remarks='') =>
+    ({ id: crypto.randomUUID ? crypto.randomUUID() : String(Math.random()), rcNo, vendor, item, category, unit, rate, gst,
+       start: addDays(s), end: addDays(e), project, value, utilized, remarks });
+  return [
+    r('RC/2026/001','UltraTech Cement Ltd','Cement OPC 53 Grade','Cement','Bag',365,28,-200,165,'Tower A',4500000,2850000,'Freight inclusive'),
+    r('RC/2026/002','ACC Ltd','Cement OPC 53 Grade','Cement','Bag',372,28,-150,20,'Tower B',3000000,2410000),
+    r('RC/2026/003','Dalmia Cement','Cement PPC','Cement','Bag',340,28,-90,275,'Tower A',2200000,640000),
+    r('RC/2026/004','Tata Steel (Tiscon)','TMT Bar Fe500D','Steel','MT',58500,18,-240,125,'Tower A',18000000,12600000),
+    r('RC/2026/005','SRMB Steel','TMT Bar Fe500D','Steel','MT',55800,18,-120,12,'Tower B',12000000,10900000,'Renewal under negotiation'),
+    r('RC/2026/006','Shyam Steel','TMT Bar Fe500D','Steel','MT',56400,18,-60,300,'Clubhouse',6000000,900000),
+    r('RC/2026/007','Ambuja RMC','Ready Mix Concrete M25','Concrete','Cum',5400,18,-180,45,'Tower A',9500000,7800000),
+    r('RC/2026/008','Nuvoco RMC','Ready Mix Concrete M25','Concrete','Cum',5250,18,-30,335,'Tower B',8000000,1100000),
+    r('RC/2026/009','Bengal Aggregates','Stone Chips 20mm','Aggregates','Cft',62,5,-210,-15,'Tower A',1800000,1750000,'Expired - extend or re-tender'),
+    r('RC/2026/010','Ganga Sand Suppliers','River Sand (Coarse)','Aggregates','Cft',48,5,-100,80,'Tower B',1500000,720000),
+    r('RC/2026/011','Magicrete','AAC Block 600x200x150','Masonry','Cum',4100,12,-160,95,'Tower A',3600000,2100000),
+    r('RC/2026/012','Kajaria Ceramics','Vitrified Tile 600x600','Finishes','Sqft',58,18,-45,320,'Tower A',5200000,450000),
+    r('RC/2026/013','Somany Ceramics','Vitrified Tile 600x600','Finishes','Sqft',55,18,-20,345,'Tower B',4800000,200000),
+    r('RC/2026/014','Asian Paints','Interior Emulsion','Finishes','Ltr',245,18,-130,28,'Clubhouse',1400000,980000),
+    r('RC/2026/015','Polycab India','FR Copper Wire 2.5 sqmm','Electrical','Coil',2150,18,-75,210,'Tower A',2600000,820000),
+    r('RC/2026/016','Havells India','FR Copper Wire 2.5 sqmm','Electrical','Coil',2240,18,-75,210,'Tower B',2400000,640000),
+    r('RC/2026/017','Astral Pipes','CPVC Pipe 1"','Plumbing','Mtr',185,18,-260,-40,'Tower A',1300000,1300000),
+    r('RC/2026/018','Supreme Industries','CPVC Pipe 1"','Plumbing','Mtr',178,18,15,380,'Clubhouse',1600000,0,'Starts soon'),
+    r('RC/2026/019','Jaquar & Co','Sanitary Fittings (Set)','Plumbing','Set',18500,18,-50,140,'Tower A',3700000,1500000),
+    r('RC/2026/020','UltraTech Cement Ltd','Cement PPC','Cement','Bag',338,28,-10,355,'Clubhouse',1500000,90000),
+  ];
+}
+
+let data;
+try { data = JSON.parse(localStorage.getItem(STORE)); } catch (e) {}
+if (!Array.isArray(data) || !data.length) data = sample();
+const save = () => { try { localStorage.setItem(STORE, JSON.stringify(data)); } catch (e) {} };
+
+// ---------- helpers ----------
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const inr = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
+const rs = n => '₹' + inr.format(Math.round(n || 0));
+const rsShort = n => {
+  n = n || 0; const a = Math.abs(n);
+  if (a >= 1e7) return '₹' + (n/1e7).toFixed(a >= 1e8 ? 1 : 2) + ' Cr';
+  if (a >= 1e5) return '₹' + (n/1e5).toFixed(1) + ' L';
+  if (a >= 1e3) return '₹' + (n/1e3).toFixed(1) + ' K';
+  return '₹' + Math.round(n);
+};
+const fmtDate = s => s ? new Date(s + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+const daysLeft = rc => Math.round((new Date(rc.end + 'T00:00:00') - today) / DAY);
+const STATUS = {
+  Active:   { color: 'var(--good)',     icon: '●' },
+  Expiring: { color: 'var(--warning)',  icon: '▲' },
+  Expired:  { color: 'var(--critical)', icon: '✕' },
+  Upcoming: { color: 'var(--muted)',    icon: '◷' },
+};
+const status = rc => {
+  if (new Date(rc.start + 'T00:00:00') > today) return 'Upcoming';
+  const d = daysLeft(rc);
+  return d < 0 ? 'Expired' : d <= 30 ? 'Expiring' : 'Active';
+};
+const badge = s => `<span class="badge"><span style="color:${STATUS[s].color}">${STATUS[s].icon}</span>${s}</span>`;
+const uniq = k => [...new Set(data.map(d => d[k]).filter(Boolean))].sort();
+
+// ---------- filters ----------
+function fillSelect(el, label, values, keep) {
+  const cur = keep ? el.value : '';
+  el.innerHTML = `<option value="">${label}</option>` + values.map(v => `<option>${esc(v)}</option>`).join('');
+  if (values.includes(cur)) el.value = cur;
+}
+function refreshOptions() {
+  fillSelect($('fCategory'), 'All categories', uniq('category'), true);
+  fillSelect($('fVendor'), 'All vendors', uniq('vendor'), true);
+  fillSelect($('fProject'), 'All projects', uniq('project'), true);
+  fillSelect($('fStatus'), 'All statuses', Object.keys(STATUS), true);
+  const items = uniq('item'), cur = $('rateItem').value;
+  $('rateItem').innerHTML = items.map(v => `<option>${esc(v)}</option>`).join('');
+  // default to the item with the most vendors
+  if (items.includes(cur)) $('rateItem').value = cur;
+  else if (items.length) $('rateItem').value = items.slice().sort((a, b) => data.filter(d => d.item === b).length - data.filter(d => d.item === a).length)[0];
+  for (const [id, k] of [['dlVendor','vendor'],['dlProject','project'],['dlItem','item'],['dlCategory','category']])
+    $(id).innerHTML = uniq(k).map(v => `<option value="${esc(v)}">`).join('');
+}
+function filtered() {
+  const q = $('fSearch').value.trim().toLowerCase();
+  const c = $('fCategory').value, v = $('fVendor').value, p = $('fProject').value, s = $('fStatus').value;
+  return data.filter(d =>
+    (!c || d.category === c) && (!v || d.vendor === v) && (!p || d.project === p) && (!s || status(d) === s) &&
+    (!q || [d.rcNo, d.vendor, d.item, d.category, d.project, d.remarks].join(' ').toLowerCase().includes(q)));
+}
+
+// ---------- KPIs ----------
+function renderKpis(rows) {
+  const cnt = s => rows.filter(d => status(d) === s).length;
+  const total = rows.reduce((a, d) => a + (+d.value || 0), 0);
+  const used = rows.reduce((a, d) => a + (+d.utilized || 0), 0);
+  const pct = total ? used / total * 100 : 0;
+  const tile = (lbl, val, sub, dot) => `<div class="kpi"><div class="lbl">${dot ? `<span style="color:${dot}">${dot === STATUS.Expiring.color ? '▲' : dot === STATUS.Expired.color ? '✕' : '●'}</span>` : ''}${lbl}</div><div class="val">${val}</div><div class="sub">${sub}</div></div>`;
+  $('kpis').innerHTML =
+    tile('Total RCs', rows.length, `${new Set(rows.map(d => d.vendor)).size} vendors`) +
+    tile('Active', cnt('Active'), `${cnt('Upcoming')} upcoming`, STATUS.Active.color) +
+    tile('Expiring ≤ 30 days', cnt('Expiring'), 'Plan renewal / re-tender', STATUS.Expiring.color) +
+    tile('Expired', cnt('Expired'), 'Not valid for new POs', STATUS.Expired.color) +
+    tile('Contract value', rsShort(total), rs(total)) +
+    tile('Utilized', pct.toFixed(1) + '%', `${rsShort(used)} of ${rsShort(total)}`);
+}
+
+// ---------- tooltip ----------
+const tip = $('tip');
+document.addEventListener('mousemove', e => {
+  const t = e.target.closest && e.target.closest('[data-tip]');
+  if (!t) { tip.style.display = 'none'; return; }
+  tip.innerHTML = t.getAttribute('data-tip');
+  tip.style.display = 'block';
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = e.clientX + 14, y = e.clientY + 14;
+  if (x + w > innerWidth - 8) x = e.clientX - w - 14;
+  if (y + h > innerHeight - 8) y = e.clientY - h - 14;
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+});
+
+// ---------- charts (plain SVG) ----------
+const trunc = (s, n) => s.length > n ? s.slice(0, n - 1) + '…' : s;
+function hbars(el, rows, { fmt = rsShort, track = false, maxLabel = 22, markMin = false } = {}) {
+  if (!rows.length) { el.innerHTML = '<div class="empty">No data for current filters</div>'; return; }
+  const W = Math.max(el.clientWidth, 280), rowH = 30, barH = 14, padT = 4;
+  const labelW = Math.min(170, W * 0.36), valW = 78;
+  const plotW = W - labelW - valW;
+  const max = Math.max(...rows.map(r => track ? r.total : r.value), 1);
+  const minV = markMin ? Math.min(...rows.map(r => r.value)) : null;
+  const H = padT + rows.length * rowH;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img">`;
+  rows.forEach((r, i) => {
+    const y = padT + i * rowH, by = y + (rowH - barH) / 2;
+    const bw = Math.max(2, (r.value / max) * plotW);
+    s += `<g class="hov" data-tip="${esc(r.tip)}">`;
+    s += `<rect class="hit" x="0" y="${y}" width="${W}" height="${rowH}" rx="6"/>`;
+    s += `<text x="${labelW - 10}" y="${y + rowH / 2 + 4}" text-anchor="end">${esc(trunc(r.label, maxLabel))}</text>`;
+    if (track) s += `<rect class="track" x="${labelW}" y="${by}" width="${Math.max(2, (r.total / max) * plotW)}" height="${barH}" rx="4"/>`;
+    s += `<rect class="bar" x="${labelW}" y="${by}" width="${bw}" height="${barH}" rx="4"/>`;
+    const vx = labelW + (track ? Math.max(2, (r.total / max) * plotW) : bw) + 8;
+    s += `<text class="lbl-strong" x="${vx}" y="${y + rowH / 2 + 4}">${esc(fmt(r))}${markMin && r.value === minV ? '  · L1' : ''}</text>`;
+    s += `</g>`;
+  });
+  el.innerHTML = s + '</svg>';
+}
+
+function vbars(el, cols) {
+  if (!cols.some(c => c.value)) { el.innerHTML = '<div class="empty">No contracts ending in this window</div>'; return; }
+  const W = Math.max(el.clientWidth, 280), H = 220, padL = 28, padB = 36, padT = 18;
+  const plotH = H - padB - padT, max = Math.max(...cols.map(c => c.value), 1);
+  const step = Math.max(1, Math.ceil(max / 4)), top = step * Math.ceil(max / step);
+  const slot = (W - padL) / cols.length, bw = Math.min(36, slot * 0.6);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img">`;
+  for (let v = 0; v <= top; v += step) {
+    const y = padT + plotH - (v / top) * plotH;
+    s += `<line x1="${padL}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--${v ? 'grid' : 'axis'})" stroke-width="1"/>`;
+    s += `<text x="${padL - 6}" y="${y + 4}" text-anchor="end">${v}</text>`;
+  }
+  cols.forEach((c, i) => {
+    const cx = padL + slot * i + slot / 2, h = (c.value / top) * plotH;
+    s += `<g class="hov" data-tip="${esc(c.tip)}"><rect class="hit" x="${cx - slot / 2}" y="${padT}" width="${slot}" height="${plotH}"/>`;
+    if (c.value) {
+      s += `<rect class="bar" x="${cx - bw / 2}" y="${padT + plotH - h}" width="${bw}" height="${h}" rx="4" style="${c.past ? 'fill:var(--critical)' : ''}"/>`;
+      s += `<text class="lbl-strong" x="${cx}" y="${padT + plotH - h - 6}" text-anchor="middle">${c.value}</text>`;
+    }
+    s += `<text x="${cx}" y="${H - padB + 18}" text-anchor="middle">${esc(c.label)}</text></g>`;
+  });
+  el.innerHTML = s + '</svg>';
+}
+
+function renderCharts(rows) {
+  // value by category
+  const byCat = {};
+  rows.forEach(d => { const c = byCat[d.category] ||= { value: 0, n: 0, used: 0 }; c.value += +d.value || 0; c.used += +d.utilized || 0; c.n++; });
+  hbars($('chCategory'), Object.entries(byCat).sort((a, b) => b[1].value - a[1].value).map(([k, v]) => ({
+    label: k, value: v.value, tip: `<b>${esc(k)}</b><span class="k">Contract value:</span> ${rs(v.value)}<br><span class="k">Utilized:</span> ${rs(v.used)}<br><span class="k">RCs:</span> ${v.n}`
+  })), { fmt: r => rsShort(r.value) });
+
+  // expiry outlook: expired bucket + next 6 months
+  const cols = [{ label: 'Expired', value: 0, past: true, list: [] }];
+  for (let i = 0; i < 6; i++) {
+    const m = new Date(today.getFullYear(), today.getMonth() + i, 1);
+    cols.push({ label: m.toLocaleDateString('en-IN', { month: 'short' }) + (m.getMonth() === 0 || i === 0 ? ' ' + String(m.getFullYear()).slice(2) : ''), y: m.getFullYear(), m: m.getMonth(), value: 0, list: [] });
+  }
+  rows.forEach(d => {
+    const e = new Date(d.end + 'T00:00:00');
+    if (e < today) { cols[0].value++; cols[0].list.push(d); return; }
+    const c = cols.find(c => c.y === e.getFullYear() && c.m === e.getMonth());
+    if (c) { c.value++; c.list.push(d); }
+  });
+  cols.forEach(c => c.tip = `<b>${c.past ? 'Already expired' : 'Ending in ' + esc(c.label)}</b>` +
+    (c.list.length ? c.list.slice(0, 6).map(d => `${esc(d.rcNo)} · ${esc(trunc(d.vendor, 22))}`).join('<br>') + (c.list.length > 6 ? `<br>+${c.list.length - 6} more` : '') : '<span class="k">None</span>'));
+  vbars($('chExpiry'), cols);
+
+  // utilization by vendor
+  const byV = {};
+  rows.forEach(d => { const v = byV[d.vendor] ||= { total: 0, value: 0, n: 0 }; v.total += +d.value || 0; v.value += +d.utilized || 0; v.n++; });
+  hbars($('chVendor'), Object.entries(byV).sort((a, b) => b[1].total - a[1].total).slice(0, 10).map(([k, v]) => ({
+    label: k, value: v.value, total: v.total,
+    tip: `<b>${esc(k)}</b><span class="k">Utilized:</span> ${rs(v.value)}<br><span class="k">Contract:</span> ${rs(v.total)}<br><span class="k">Balance:</span> ${rs(v.total - v.value)}<br><span class="k">RCs:</span> ${v.n}`
+  })), { track: true, fmt: r => (r.total ? Math.round(r.value / r.total * 100) : 0) + '%' });
+
+  // rate comparison for chosen item (all data, so every vendor quote is visible)
+  const item = $('rateItem').value;
+  const rr = data.filter(d => d.item === item).sort((a, b) => a.rate - b.rate);
+  hbars($('chRate'), rr.map(d => ({
+    label: d.vendor, value: +d.rate,
+    tip: `<b>${esc(d.vendor)}</b>${esc(d.rcNo)} · ${esc(d.project || '')}<br><span class="k">Rate:</span> ₹${inr.format(d.rate)} / ${esc(d.unit)} + ${d.gst}% GST<br><span class="k">Landed:</span> ₹${inr.format(d.rate * (1 + d.gst / 100))}<br><span class="k">Status:</span> ${status(d)} (till ${fmtDate(d.end)})`
+  })), { fmt: r => '₹' + inr.format(r.value), markMin: true });
+}
+
+// ---------- table ----------
+const COLS = [
+  ['rcNo', 'RC No'], ['vendor', 'Vendor'], ['item', 'Item'], ['project', 'Project'],
+  ['rate', 'Rate (₹)', 'num'], ['end', 'Valid till'], ['value', 'Contract value', 'num'],
+  ['util', 'Utilization'], ['status', 'Status'], ['', '']
+];
+let sortKey = 'end', sortDir = 1;
+const sortVal = (d, k) => k === 'status' ? ['Expired','Expiring','Active','Upcoming'].indexOf(status(d))
+  : k === 'util' ? (d.value ? d.utilized / d.value : 0) : d[k];
+function renderTable(rows) {
+  $('thead').innerHTML = COLS.map(([k, l, c]) => `<th class="${c || ''}" data-k="${k}">${l}${k && k === sortKey ? (sortDir > 0 ? ' ↑' : ' ↓') : ''}</th>`).join('');
+  rows = rows.slice().sort((a, b) => {
+    const x = sortVal(a, sortKey), y = sortVal(b, sortKey);
+    return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y))) * sortDir;
+  });
+  $('tbody').innerHTML = rows.map(d => {
+    const st = status(d), dl = daysLeft(d), p = d.value ? d.utilized / d.value * 100 : 0;
+    return `<tr>
+      <td><b>${esc(d.rcNo)}</b>${d.remarks ? `<span class="small" title="${esc(d.remarks)}">${esc(trunc(d.remarks, 28))}</span>` : ''}</td>
+      <td>${esc(d.vendor)}</td>
+      <td>${esc(d.item)}<span class="small">${esc(d.category)}</span></td>
+      <td>${esc(d.project || '—')}</td>
+      <td class="num">${inr.format(d.rate)}<span class="small">/ ${esc(d.unit || '-')} · GST ${d.gst ?? 0}%</span></td>
+      <td>${fmtDate(d.end)}<span class="small">${st === 'Upcoming' ? 'starts ' + fmtDate(d.start) : dl < 0 ? Math.abs(dl) + ' days ago' : dl + ' days left'}</span></td>
+      <td class="num">${rs(d.value)}<span class="small">bal ${rsShort((d.value || 0) - (d.utilized || 0))}</span></td>
+      <td><div class="util" title="${rs(d.utilized)} used"><div class="trk"><div class="fil${p > 100 ? ' over' : ''}" style="width:${Math.min(100, p)}%"></div></div><span>${p.toFixed(0)}%</span></div></td>
+      <td>${badge(st)}</td>
+      <td><button class="icon-btn" data-edit="${d.id}" title="Edit">✎</button><button class="icon-btn" data-del="${d.id}" title="Delete">🗑</button></td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="${COLS.length}" style="text-align:center;color:var(--muted);padding:24px">No rate contracts match the filters</td></tr>`;
+  $('tblCount').textContent = `${rows.length} of ${data.length} RCs`;
+}
+
+function render() {
+  const rows = filtered();
+  renderKpis(rows); renderCharts(rows); renderTable(rows);
+}
+function rebuild() { refreshOptions(); render(); }
+
+// ---------- events ----------
+['fSearch','fCategory','fVendor','fProject','fStatus'].forEach(id => $(id).addEventListener('input', render));
+$('rateItem').addEventListener('input', render);
+$('btnClear').onclick = () => { ['fSearch','fCategory','fVendor','fProject','fStatus'].forEach(id => $(id).value = ''); render(); };
+$('thead').addEventListener('click', e => {
+  const k = e.target.closest('th')?.dataset.k; if (!k) return;
+  sortDir = sortKey === k ? -sortDir : 1; sortKey = k; render();
+});
+$('tbody').addEventListener('click', e => {
+  const ed = e.target.closest('[data-edit]'), de = e.target.closest('[data-del]');
+  if (ed) openForm(data.find(d => d.id === ed.dataset.edit));
+  if (de) {
+    const d = data.find(x => x.id === de.dataset.del);
+    if (confirm(`Delete ${d.rcNo} (${d.vendor})?`)) { data = data.filter(x => x !== d); save(); rebuild(); }
+  }
+});
+let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(render, 120); });
+
+// form
+let editing = null;
+function openForm(rc) {
+  editing = rc || null;
+  $('dlgTitle').textContent = rc ? 'Edit rate contract' : 'Add rate contract';
+  const f = $('frm'); f.reset();
+  const v = rc || { gst: 18, utilized: 0, start: iso(today), end: addDays(365) };
+  for (const el of f.elements) if (el.name && v[el.name] !== undefined) el.value = v[el.name];
+  $('dlg').showModal();
+}
+$('btnAdd').onclick = () => openForm();
+$('dlg').addEventListener('close', () => {
+  if ($('dlg').returnValue !== 'save') return;
+  const f = $('frm'), o = {};
+  for (const el of f.elements) if (el.name) o[el.name] = el.value.trim();
+  ['rate','gst','value','utilized'].forEach(k => o[k] = +o[k] || 0);
+  if (editing) Object.assign(editing, o);
+  else data.push({ id: crypto.randomUUID ? crypto.randomUUID() : String(Math.random()), ...o });
+  save(); rebuild();
+});
+$('btnSave').addEventListener('click', e => {
+  const f = $('frm');
+  if (!f.reportValidity()) { e.preventDefault(); return; }
+  if (f.end.value < f.start.value) { e.preventDefault(); alert('End date must be after start date.'); }
+});
+
+// CSV
+const CSV_COLS = ['rcNo','vendor','item','category','unit','rate','gst','start','end','project','value','utilized','remarks'];
+const CSV_HEAD = ['RC No','Vendor','Item','Category','Unit','Rate','GST %','Start Date','End Date','Project','Contract Value','Utilized Value','Remarks'];
+$('btnExport').onclick = () => {
+  const q = v => /[",\n]/.test(String(v ?? '')) ? `"${String(v).replace(/"/g, '""')}"` : (v ?? '');
+  const csv = [CSV_HEAD.join(','), ...filtered().map(d => CSV_COLS.map(k => q(d[k])).join(','))].join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv' }));
+  a.download = `rate-contracts-${iso(today)}.csv`; a.click();
+};
+function parseCSV(t) {
+  const rows = []; let row = [], cur = '', q = false;
+  t = t.replace(/^﻿/, '');
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (q) { if (c === '"') { if (t[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+    else cur += c;
+  }
+  if (cur || row.length) { row.push(cur); rows.push(row); }
+  return rows.filter(r => r.some(c => c.trim()));
+}
+function toISO(s) {
+  s = (s || '').trim(); if (!s) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/); // DD/MM/YYYY
+  if (m) return `${m[3].length === 2 ? '20' + m[3] : m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  const d = new Date(s); return isNaN(d) ? '' : iso(d);
+}
+$('btnImport').onclick = () => $('fileIn').click();
+$('fileIn').onchange = async e => {
+  const file = e.target.files[0]; e.target.value = ''; if (!file) return;
+  const rows = parseCSV(await file.text());
+  if (rows.length < 2) { alert('CSV has no data rows.'); return; }
+  const norm = s => s.toLowerCase().replace(/[^a-z]/g, '');
+  const head = rows[0].map(norm);
+  const idx = CSV_COLS.map((k, i) => { const j = head.indexOf(norm(CSV_HEAD[i])); return j >= 0 ? j : head.indexOf(norm(k)); });
+  if (idx[0] < 0 || idx[1] < 0 || idx[2] < 0) { alert('CSV needs at least these columns: ' + CSV_HEAD.slice(0, 3).join(', ') + '\nTip: Export CSV first to get the template.'); return; }
+  const imported = rows.slice(1).map(r => {
+    const o = { id: crypto.randomUUID ? crypto.randomUUID() : String(Math.random()) };
+    CSV_COLS.forEach((k, i) => o[k] = idx[i] >= 0 ? (r[idx[i]] || '').trim() : '');
+    ['rate','gst','value','utilized'].forEach(k => o[k] = +String(o[k]).replace(/[₹,\s%]/g, '') || 0);
+    o.start = toISO(o.start) || iso(today); o.end = toISO(o.end) || o.start;
+    return o;
+  }).filter(o => o.rcNo || o.vendor);
+  const replace = confirm(`Found ${imported.length} RCs.\n\nOK = replace current data\nCancel = add to current data`);
+  data = replace ? imported : data.concat(imported);
+  save(); rebuild();
+};
+$('btnReset').onclick = () => { if (confirm('Replace all data with sample data?')) { data = sample(); save(); rebuild(); } };
+$('btnPrint').onclick = () => print();
+
+// theme
+const root = document.documentElement;
+try { const t = localStorage.getItem(STORE + '-theme'); if (t) root.dataset.theme = t; } catch (e) {}
+$('btnTheme').onclick = () => {
+  const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  root.dataset.theme = dark ? 'light' : 'dark';
+  try { localStorage.setItem(STORE + '-theme', root.dataset.theme); } catch (e) {}
+};
+
+$('asof').textContent = 'Status as of ' + today.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric' });
+rebuild();
+})();
+</script>
+</body>
+</html>
